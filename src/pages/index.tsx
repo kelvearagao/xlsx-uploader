@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import * as XLSX from "xlsx";
 import Head from "next/head";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 
 export default function Home() {
   const [data, setData] = useState([]);
+  const [publish, setPublish] = useState({});
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -33,9 +34,24 @@ export default function Home() {
       // Remove o cabeçalho e define o estado com os dados
       const rows = jsonData;
       setData(rows);
+
+      const publish = rows.slice(1).reduce((acc, item) => {
+        acc[item[0]] = item[9] === "PUBLICAR";
+
+        return acc;
+      }, {});
+
+      setPublish(publish);
     };
     reader.readAsBinaryString(file);
   };
+
+  const handlePublish = useCallback((e) => {
+    setPublish((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.checked,
+    }));
+  }, []);
 
   return (
     <>
@@ -65,25 +81,40 @@ export default function Home() {
               <table border={1}>
                 <thead>
                   <tr>
-                    {data[0].map(
-                      (item, index) => index < 2 && <th key={item}>{item}</th>
-                    )}
+                    {data[0].map((item, index) => (
+                      <th key={item}>{item.replaceAll("_", " ")}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {data
-                    .slice(1)
-                    .map(
-                      (row, index) =>
-                        row?.length > 0 && (
-                          <tr key={index}>
-                            {row.map(
-                              (row, colIndex) =>
-                                colIndex < 2 && <td key={colIndex}>{row}</td>
-                            )}
-                          </tr>
-                        )
-                    )}
+                  {data.slice(1).map(
+                    (row, index) =>
+                      row?.length > 0 && (
+                        <tr key={index}>
+                          {Array(data[0].length)
+                            .fill({})
+                            .map((_, colIndex) => (
+                              <td key={colIndex}>
+                                {colIndex == 9 ? (
+                                  <div>
+                                    <input
+                                      name={row[0]}
+                                      type="checkbox"
+                                      checked={publish[row[0]]}
+                                      onChange={handlePublish}
+                                    />{" "}
+                                    Publicar
+                                  </div>
+                                ) : colIndex == 2 ? (
+                                  row[2].toFixed(2)
+                                ) : (
+                                  row[colIndex]
+                                )}
+                              </td>
+                            ))}
+                        </tr>
+                      )
+                  )}
                 </tbody>
               </table>
             )}
